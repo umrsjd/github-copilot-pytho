@@ -44,8 +44,16 @@ h1 {
     color: #333;
 }
 
+.sudoku-cell.user-entered {
+    background: #fff;
+}
+
 .sudoku-cell.incorrect {
     background: #ffcdd2;
+    border-color: #b71c1c;
+    box-shadow: inset 0 0 0 2px #b71c1c;
+    text-decoration: underline wavy #b71c1c;
+    text-decoration-thickness: 2px;
 }
 
 .sudoku-cell:nth-child(3),

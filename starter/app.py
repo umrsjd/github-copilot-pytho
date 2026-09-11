@@ -43,5 +43,31 @@ def check_solution():
                 incorrect.append([i, j])
     return jsonify({'incorrect': incorrect})
 
+@app.route('/validate-move', methods=['POST'])
+def validate_move():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Request must be a JSON object'}), 400
+
+    row = data.get('row')
+    col = data.get('col')
+    value = data.get('value')
+    if not all(isinstance(item, int) and not isinstance(item, bool)
+               for item in (row, col, value)):
+        return jsonify({'error': 'row, col, and value must be integers'}), 400
+    if not 0 <= row < sudoku_logic.SIZE or not 0 <= col < sudoku_logic.SIZE:
+        return jsonify({'error': 'row and col must be between 0 and 8'}), 400
+    if not 1 <= value <= sudoku_logic.SIZE:
+        return jsonify({'error': 'value must be between 1 and 9'}), 400
+
+    puzzle = CURRENT.get('puzzle')
+    solution = CURRENT.get('solution')
+    if puzzle is None or solution is None:
+        return jsonify({'error': 'No game in progress'}), 400
+    if puzzle[row][col] != sudoku_logic.EMPTY:
+        return jsonify({'error': 'Prefilled cells cannot be changed'}), 400
+
+    return jsonify({'valid': value == solution[row][col]})
+
 if __name__ == '__main__':
     app.run(debug=True)
