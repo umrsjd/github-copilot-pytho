@@ -289,7 +289,7 @@ function setHintCount(count) {
   document.getElementById('hint-count').innerText = `Hints used: ${hintCount}`;
 }
 
-async function validateCell(input, value, version) {
+async function validateCell(input, value, version, gameVersion) {
   const row = Number(input.dataset.row);
   const col = Number(input.dataset.col);
   const response = await fetch('/validate-move', {
@@ -298,6 +298,9 @@ async function validateCell(input, value, version) {
     body: JSON.stringify({row, col, value: Number(value)})
   });
   const data = await response.json();
+  if (newGameRequestVersion !== gameVersion) {
+    return;
+  }
   if (!response.ok) {
     throw new Error(data.error || 'Unable to validate move.');
   }
@@ -326,6 +329,7 @@ function handleCellInput(event) {
   const col = Number(input.dataset.col);
   const index = cellIndex(row, col);
   const version = validationVersions[index] + 1;
+  const gameVersion = newGameRequestVersion;
   validationVersions[index] = version;
   const value = input.value.replace(/[^1-9]/g, '').slice(0, 1);
   input.value = value;
@@ -337,8 +341,10 @@ function handleCellInput(event) {
   }
 
   setCellState(input, 'user-entered');
-  validateCell(input, value, version).catch((error) => {
-    if (validationVersions[index] !== version || input.value !== value) {
+  validateCell(input, value, version, gameVersion).catch((error) => {
+    if (newGameRequestVersion !== gameVersion
+        || validationVersions[index] !== version
+        || input.value !== value) {
       return;
     }
     setCellState(input, 'user-entered');
@@ -418,6 +424,7 @@ async function checkSolution() {
   if (gameCompleted) {
     return;
   }
+  const gameVersion = newGameRequestVersion;
   const boardDiv = document.getElementById('sudoku-board');
   const inputs = boardDiv.getElementsByTagName('input');
   const board = [];
@@ -435,7 +442,7 @@ async function checkSolution() {
     body: JSON.stringify({board})
   });
   const data = await res.json();
-  if (gameCompleted) {
+  if (newGameRequestVersion !== gameVersion || gameCompleted) {
     return;
   }
   if (!res.ok) {
@@ -482,6 +489,7 @@ async function requestHint() {
   if (gameCompleted) {
     return;
   }
+  const gameVersion = newGameRequestVersion;
   const target = findHintTarget();
   if (!target) {
     setMessage('No cells are available for a hint.', true);
@@ -499,6 +507,9 @@ async function requestHint() {
     body: JSON.stringify({row, col})
   });
   const data = await response.json();
+  if (newGameRequestVersion !== gameVersion) {
+    return;
+  }
   if (!response.ok) {
     setMessage(data.error || 'Unable to provide a hint.', true);
     return;
