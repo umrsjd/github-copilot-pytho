@@ -31,17 +31,45 @@ def new_game():
 
 @app.route('/check', methods=['POST'])
 def check_solution():
-    data = request.json
-    board = data.get('board')
     solution = CURRENT.get('solution')
-    if solution is None:
+    puzzle = CURRENT.get('puzzle')
+    if puzzle is None or solution is None:
         return jsonify({'error': 'No game in progress'}), 400
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Request must be a JSON object'}), 400
+
+    board = data.get('board')
+    if (not isinstance(board, list)
+            or len(board) != sudoku_logic.SIZE
+            or any(not isinstance(row, list) or len(row) != sudoku_logic.SIZE
+                   for row in board)):
+        return jsonify({'error': 'board must be a 9x9 array'}), 400
+
+    if any(
+        isinstance(cell, bool)
+        or not isinstance(cell, int)
+        or not sudoku_logic.EMPTY <= cell <= sudoku_logic.SIZE
+        for row in board
+        for cell in row
+    ):
+        return jsonify({'error': 'board cells must be integers between 0 and 9'}), 400
+
     incorrect = []
     for i in range(sudoku_logic.SIZE):
         for j in range(sudoku_logic.SIZE):
-            if board[i][j] != solution[i][j]:
-                incorrect.append([i, j])
-    return jsonify({'incorrect': incorrect})
+            if puzzle[i][j] == sudoku_logic.EMPTY and board[i][j] != sudoku_logic.EMPTY:
+                if board[i][j] != solution[i][j]:
+                    incorrect.append([i, j])
+
+    complete = all(
+        puzzle[i][j] != sudoku_logic.EMPTY
+        or board[i][j] == solution[i][j]
+        for i in range(sudoku_logic.SIZE)
+        for j in range(sudoku_logic.SIZE)
+    )
+    return jsonify({'incorrect': incorrect, 'complete': complete})
 
 @app.route('/validate-move', methods=['POST'])
 def validate_move():

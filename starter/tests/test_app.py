@@ -69,18 +69,101 @@ def test_post_check_with_correct_solution_returns_no_incorrect_cells(client):
     response = client.post('/check', json={'board': solution})
 
     assert response.status_code == 200
-    assert response.get_json() == {'incorrect': []}
+    assert response.get_json() == {'incorrect': [], 'complete': True}
 
 
 def test_post_check_reports_incorrect_solution_cell(client):
     client.get('/new')
-    board = copy.deepcopy(app_module.CURRENT['solution'])
-    board[0][0] = board[0][0] % sudoku_logic.SIZE + 1
+    puzzle = app_module.CURRENT['puzzle']
+    solution = app_module.CURRENT['solution']
+    row, col = next(
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if puzzle[row][col] == sudoku_logic.EMPTY
+    )
+    board = copy.deepcopy(solution)
+    board[row][col] = solution[row][col] % sudoku_logic.SIZE + 1
 
     response = client.post('/check', json={'board': board})
 
     assert response.status_code == 200
-    assert response.get_json() == {'incorrect': [[0, 0]]}
+    assert response.get_json() == {
+        'incorrect': [[row, col]],
+        'complete': False,
+    }
+
+
+def test_post_check_does_not_report_blank_cells_and_is_incomplete(client):
+    client.get('/new')
+
+    response = client.post('/check', json={
+        'board': sudoku_logic.create_empty_board(),
+    })
+
+    assert response.status_code == 200
+    assert response.get_json() == {'incorrect': [], 'complete': False}
+
+
+def test_post_check_ignores_prefilled_cells(client):
+    client.get('/new')
+    puzzle = app_module.CURRENT['puzzle']
+    board = copy.deepcopy(app_module.CURRENT['solution'])
+    row, col = next(
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if puzzle[row][col] != sudoku_logic.EMPTY
+    )
+    board[row][col] = board[row][col] % sudoku_logic.SIZE + 1
+
+    response = client.post('/check', json={'board': board})
+
+    assert response.status_code == 200
+    assert response.get_json() == {'incorrect': [], 'complete': True}
+
+
+@pytest.mark.parametrize(
+    'payload',
+    [
+        {},
+        {'board': []},
+        {'board': [[0] * sudoku_logic.SIZE for _ in range(8)]},
+        {'board': [[0] * 8 for _ in range(sudoku_logic.SIZE)]},
+        {'board': [[None] * sudoku_logic.SIZE for _ in range(sudoku_logic.SIZE)]},
+        {'board': [[True] * sudoku_logic.SIZE for _ in range(sudoku_logic.SIZE)]},
+        {'board': [[1.5] * sudoku_logic.SIZE for _ in range(sudoku_logic.SIZE)]},
+        {'board': [[-1] * sudoku_logic.SIZE for _ in range(sudoku_logic.SIZE)]},
+        {'board': [[10] * sudoku_logic.SIZE for _ in range(sudoku_logic.SIZE)]},
+    ],
+)
+def test_post_check_rejects_malformed_board_payloads(client, payload):
+    client.get('/new')
+
+    response = client.post('/check', json=payload)
+
+    assert response.status_code == 400
+    assert 'error' in response.get_json()
+
+
+def test_post_check_rejects_non_json_request(client):
+    client.get('/new')
+
+    response = client.post('/check', data='not json')
+
+    assert response.status_code == 400
+    assert response.get_json() == {'error': 'Request must be a JSON object'}
+
+
+def test_post_check_response_does_not_expose_solution(client):
+    client.get('/new')
+    solution = copy.deepcopy(app_module.CURRENT['solution'])
+
+    response = client.post('/check', json={'board': solution})
+
+    assert response.status_code == 200
+    assert response.get_json() == {'incorrect': [], 'complete': True}
+    assert 'solution' not in response.get_json()
 
 
 def test_validate_move_before_new_game_returns_error(client):

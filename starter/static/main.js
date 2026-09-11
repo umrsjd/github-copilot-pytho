@@ -164,9 +164,9 @@ async function checkSolution() {
   });
   const data = await res.json();
   const msg = document.getElementById('message');
-  if (data.error) {
+  if (!res.ok) {
     msg.style.color = '#d32f2f';
-    msg.innerText = data.error;
+    msg.innerText = data.error || 'Unable to check solution.';
     return;
   }
   const incorrect = new Set(data.incorrect.map(x => x[0]*SIZE + x[1]));
@@ -181,12 +181,15 @@ async function checkSolution() {
       setCellState(inp, 'empty');
     }
   }
-  if (incorrect.size === 0) {
+  if (data.complete) {
     msg.style.color = '#388e3c';
     msg.innerText = 'Congratulations! You solved it!';
-  } else {
+  } else if (incorrect.size > 0) {
     msg.style.color = '#d32f2f';
     msg.innerText = 'Some cells are incorrect.';
+  } else {
+    msg.style.color = '';
+    msg.innerText = 'Keep filling in the puzzle.';
   }
 }
 
