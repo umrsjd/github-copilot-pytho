@@ -110,3 +110,30 @@ button:hover {
     font-weight: bold;
     color: #333;
 }
+
+.completion-summary {
+    margin: 20px auto 0;
+    padding: 12px 20px;
+    max-width: 320px;
+    border: 2px solid #388e3c;
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
+.completion-summary h2,
+.completion-summary p {
+    margin: 4px 0 8px;
+}
+
+.completion-summary dl {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    margin: 0;
+    text-align: left;
+}
+
+.completion-summary dd {
+    margin: 0;
+    font-weight: bold;
+}

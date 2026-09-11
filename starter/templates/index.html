@@ -21,6 +21,18 @@
     <span id="game-timer" aria-label="Elapsed time">00:00</span>
     <span id="hint-count" aria-live="polite">Hints used: 0</span>
     <span id="message" role="status" aria-live="polite" aria-atomic="true"></span>
+    <section id="completion-summary" class="completion-summary" hidden aria-label="Completion summary">
+      <h2>Congratulations!</h2>
+      <p>Your Sudoku is complete.</p>
+      <dl>
+        <dt>Completion time</dt>
+        <dd id="completion-time">00:00</dd>
+        <dt>Difficulty</dt>
+        <dd id="completion-difficulty"></dd>
+        <dt>Hints used</dt>
+        <dd id="completion-hints">0</dd>
+      </dl>
+    </section>
   </div>
   <script src="/static/main.js"></script>
 </body>
