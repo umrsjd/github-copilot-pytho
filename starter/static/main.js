@@ -1,6 +1,8 @@
 // Client-side rendering and interaction for the Flask-backed Sudoku
 const SIZE = 9;
 const LEADERBOARD_STORAGE_KEY = 'sudokuLeaderboard';
+const THEME_STORAGE_KEY = 'sudokuTheme';
+const VALID_THEMES = new Set(['light', 'dark']);
 const LEADERBOARD_LIMIT = 10;
 const VALID_DIFFICULTIES = new Set(['Easy', 'Medium', 'Hard']);
 let puzzle = [];
@@ -14,6 +16,47 @@ let newGameRequestVersion = 0;
 let gameCompleted = false;
 let finalElapsedSeconds = null;
 let leaderboardPromptedForGame = false;
+
+function getStoredTheme() {
+  try {
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return VALID_THEMES.has(storedTheme) ? storedTheme : 'light';
+  } catch (error) {
+    return 'light';
+  }
+}
+
+function updateThemeToggle(theme) {
+  const themeToggle = document.getElementById('theme-toggle');
+  const darkModeActive = theme === 'dark';
+  themeToggle.innerText = `Dark mode: ${darkModeActive ? 'On' : 'Off'}`;
+  themeToggle.setAttribute('aria-pressed', String(darkModeActive));
+  themeToggle.setAttribute(
+    'aria-label',
+    darkModeActive ? 'Dark mode is on' : 'Dark mode is off'
+  );
+}
+
+function applyTheme(theme) {
+  const selectedTheme = VALID_THEMES.has(theme) ? theme : 'light';
+  document.documentElement.dataset.theme = selectedTheme;
+  updateThemeToggle(selectedTheme);
+  return selectedTheme;
+}
+
+function saveTheme(theme) {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (error) {
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.dataset.theme;
+  const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme(nextTheme);
+  saveTheme(nextTheme);
+}
 
 function isValidScore(score) {
   return score !== null
@@ -202,6 +245,9 @@ function cellIndex(row, col) {
 
 function setCellState(input, state) {
   input.className = 'sudoku-cell';
+  if (input.dataset.region === 'alternate') {
+    input.classList.add('region-alt');
+  }
   input.dataset.state = state;
   input.setAttribute('aria-invalid', state === 'incorrect' ? 'true' : 'false');
 
@@ -235,7 +281,7 @@ function setCellState(input, state) {
 function setMessage(text, isError = false) {
   const message = document.getElementById('message');
   message.innerText = text;
-  message.style.color = isError ? '#d32f2f' : '';
+  message.classList.toggle('error', isError);
 }
 
 function setHintCount(count) {
@@ -312,6 +358,11 @@ function createBoardElement() {
       input.type = 'text';
       input.maxLength = 1;
       input.className = 'sudoku-cell';
+      const regionRow = Math.floor(i / 3);
+      const regionColumn = Math.floor(j / 3);
+      input.dataset.region = (regionRow + regionColumn) % 2 === 1
+        ? 'alternate'
+        : 'base';
       input.dataset.row = i;
       input.dataset.col = j;
       input.addEventListener('input', handleCellInput);
@@ -467,6 +518,8 @@ async function requestHint() {
 
 // Wire buttons
 window.addEventListener('load', () => {
+  applyTheme(getStoredTheme());
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   document.getElementById('new-game').addEventListener('click', newGame);
   document.getElementById('check-solution').addEventListener('click', checkSolution);
   document.getElementById('hint').addEventListener('click', requestHint);
