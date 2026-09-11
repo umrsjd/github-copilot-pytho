@@ -1,5 +1,8 @@
 // Client-side rendering and interaction for the Flask-backed Sudoku
 const SIZE = 9;
+const LEADERBOARD_STORAGE_KEY = 'sudokuLeaderboard';
+const LEADERBOARD_LIMIT = 10;
+const VALID_DIFFICULTIES = new Set(['Easy', 'Medium', 'Hard']);
 let puzzle = [];
 let validationVersions = [];
 let hintCount = 0;
@@ -10,6 +13,88 @@ let elapsedSeconds = 0;
 let newGameRequestVersion = 0;
 let gameCompleted = false;
 let finalElapsedSeconds = null;
+let leaderboardPromptedForGame = false;
+
+function isValidScore(score) {
+  return score !== null
+    && typeof score === 'object'
+    && typeof score.playerName === 'string'
+    && score.playerName.trim() !== ''
+    && Number.isInteger(score.timeSeconds)
+    && score.timeSeconds >= 0
+    && VALID_DIFFICULTIES.has(score.difficulty)
+    && Number.isInteger(score.hintsUsed)
+    && score.hintsUsed >= 0;
+}
+
+function sortAndLimitScores(scores) {
+  return scores
+    .filter(isValidScore)
+    .sort((first, second) => first.timeSeconds - second.timeSeconds)
+    .slice(0, LEADERBOARD_LIMIT);
+}
+
+function loadLeaderboard() {
+  try {
+    const storedScores = window.localStorage.getItem(LEADERBOARD_STORAGE_KEY);
+    if (!storedScores) {
+      return [];
+    }
+    const scores = JSON.parse(storedScores);
+    return Array.isArray(scores) ? sortAndLimitScores(scores) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveLeaderboard(scores) {
+  try {
+    window.localStorage.setItem(
+      LEADERBOARD_STORAGE_KEY,
+      JSON.stringify(sortAndLimitScores(scores))
+    );
+  } catch (error) {
+  }
+}
+
+function renderLeaderboard(scores) {
+  const leaderboardBody = document.getElementById('leaderboard-body');
+  leaderboardBody.innerHTML = '';
+  const validScores = sortAndLimitScores(scores);
+
+  if (validScores.length === 0) {
+    const emptyRow = document.createElement('tr');
+    const emptyCell = document.createElement('td');
+    emptyCell.colSpan = 5;
+    emptyCell.innerText = 'No completed games yet.';
+    emptyRow.appendChild(emptyCell);
+    leaderboardBody.appendChild(emptyRow);
+    return;
+  }
+
+  validScores.forEach((score, index) => {
+    const row = document.createElement('tr');
+    const values = [
+      String(index + 1),
+      score.playerName.trim(),
+      formatElapsedTime(score.timeSeconds),
+      score.difficulty,
+      String(score.hintsUsed),
+    ];
+    values.forEach((value) => {
+      const cell = document.createElement('td');
+      cell.innerText = value;
+      row.appendChild(cell);
+    });
+    leaderboardBody.appendChild(row);
+  });
+}
+
+function addLeaderboardScore(score) {
+  const scores = sortAndLimitScores(loadLeaderboard().concat(score));
+  saveLeaderboard(scores);
+  renderLeaderboard(scores);
+}
 
 function formatElapsedTime(seconds) {
   const minutes = Math.floor(seconds / 60);
@@ -67,12 +152,16 @@ function setCompletionSummary(time, difficulty, hints) {
 function resetCompletionState() {
   gameCompleted = false;
   finalElapsedSeconds = null;
+  leaderboardPromptedForGame = false;
   document.getElementById('completion-summary').hidden = true;
   document.getElementById('check-solution').disabled = false;
   document.getElementById('hint').disabled = false;
 }
 
 function completeGame() {
+  if (gameCompleted) {
+    return;
+  }
   stopTimer();
   gameCompleted = true;
   finalElapsedSeconds = getElapsedSeconds();
@@ -84,6 +173,19 @@ function completeGame() {
     selectedDifficulty,
     hintCount
   );
+
+  if (!leaderboardPromptedForGame) {
+    leaderboardPromptedForGame = true;
+    const playerName = window.prompt('Enter your name for the leaderboard:');
+    if (playerName !== null && playerName.trim() !== '') {
+      addLeaderboardScore({
+        playerName: playerName.trim(),
+        timeSeconds: finalElapsedSeconds,
+        difficulty: selectedDifficulty,
+        hintsUsed: hintCount,
+      });
+    }
+  }
 
   const inputs = document.getElementById('sudoku-board').getElementsByTagName('input');
   for (const input of inputs) {
@@ -369,5 +471,6 @@ window.addEventListener('load', () => {
   document.getElementById('check-solution').addEventListener('click', checkSolution);
   document.getElementById('hint').addEventListener('click', requestHint);
   // initialize
+  renderLeaderboard(loadLeaderboard());
   newGame();
 });

@@ -137,3 +137,37 @@ button:hover {
     margin: 0;
     font-weight: bold;
 }
+
+.leaderboard {
+    margin: 30px auto;
+    max-width: 700px;
+}
+
+.leaderboard h2 {
+    color: #333;
+}
+
+.leaderboard table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.leaderboard th,
+.leaderboard td {
+    padding: 8px 12px;
+    border: 1px solid #bbb;
+    text-align: left;
+}
+
+.leaderboard th {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.leaderboard td:first-child,
+.leaderboard td:nth-child(3),
+.leaderboard td:last-child {
+    text-align: center;
+}
