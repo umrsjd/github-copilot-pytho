@@ -4,6 +4,56 @@ let puzzle = [];
 let validationVersions = [];
 let hintCount = 0;
 let hintedCells = new Set();
+let timerInterval = null;
+let timerStartTime = null;
+let elapsedSeconds = 0;
+let newGameRequestVersion = 0;
+
+function formatElapsedTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+
+function renderTimer() {
+  document.getElementById('game-timer').innerText = formatElapsedTime(elapsedSeconds);
+}
+
+function updateElapsedTime() {
+  elapsedSeconds = Math.floor((Date.now() - timerStartTime) / 1000);
+  renderTimer();
+}
+
+function stopTimer() {
+  if (timerInterval !== null) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  if (timerStartTime !== null) {
+    updateElapsedTime();
+    timerStartTime = null;
+  }
+}
+
+function resetTimer() {
+  stopTimer();
+  elapsedSeconds = 0;
+  renderTimer();
+}
+
+function startTimer() {
+  stopTimer();
+  elapsedSeconds = 0;
+  timerStartTime = Date.now();
+  renderTimer();
+  timerInterval = setInterval(updateElapsedTime, 1000);
+}
+
+function getElapsedSeconds() {
+  return elapsedSeconds;
+}
+
+window.getElapsedSeconds = getElapsedSeconds;
 
 function cellIndex(row, col) {
   return row * SIZE + col;
@@ -148,15 +198,21 @@ function renderPuzzle(puz) {
 }
 
 async function newGame() {
+  const requestVersion = ++newGameRequestVersion;
+  resetTimer();
   const difficulty = document.getElementById('difficulty').value;
   const res = await fetch(`/new?difficulty=${encodeURIComponent(difficulty)}`);
   const data = await res.json();
+  if (requestVersion !== newGameRequestVersion) {
+    return;
+  }
   if (!res.ok) {
     document.getElementById('message').innerText = data.error || 'Unable to start a new game.';
     return;
   }
   renderPuzzle(data.puzzle);
   document.getElementById('message').innerText = '';
+  startTimer();
 }
 
 async function checkSolution() {
@@ -196,6 +252,7 @@ async function checkSolution() {
     }
   }
   if (data.complete) {
+    stopTimer();
     msg.style.color = '#388e3c';
     msg.innerText = 'Congratulations! You solved it!';
   } else if (incorrect.size > 0) {
