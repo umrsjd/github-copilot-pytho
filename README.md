@@ -48,7 +48,7 @@ Sudoku Game is a Flask-based web application enhanced and refactored with GitHub
 │   ├── static/
 │   ├── templates/
 │   └── tests/
-├── instruction.md
+├── instructions.md
 ├── LICENSE.txt
 ├── CODEOWNERS
 └── README.md
@@ -63,7 +63,7 @@ Important application files and directories:
 - `starter/tests/` contains the pytest test suite for the Flask routes and Sudoku logic.
 - `starter/requirements.txt` lists the Python dependencies.
 - `Screenshots/` contains project screenshots.
-- `instruction.md` contains the project instructions.
+- `instructions.md` contains the project instructions that guide Copilot work.
 - `.github/copilot-instructions.md` contains repository-specific GitHub Copilot instructions.
 
 ## Installation
@@ -177,11 +177,21 @@ Validation performed for the completed project includes:
 
 The `Screenshots/` directory contains evidence of the development process and completed features, including GitHub Copilot planning and implementation screenshots and browser verification screenshots.
 
-Examples include:
+Key evidence files include:
 
-- Copilot planning and implementation: `copilot_difficulty_plan.png`, `copilot_completion_implementation.png`, `copilot_testing_plan1.png`, `copilot_async_fix_implementation.png`
-- Browser verification: `difficulty` evidence in `copilot_difficulty_plan5.png`, `invalid_move_feedback.png`, `hint_success.png`, `timer_running.png`, `leaderboard_success.png`, `responsive_mobile.png`, `grid_3x3_dark_mode.png`, `grid_3x3_styling.png`
-- Theme and completion evidence: `copilot_dark_mode_implementation.png`, `copilot_completion_implementation.png`
+- Testing framework setup: `copilot_testing_framework.png`
+- Unique-solution implementation and verification: `copilot_unique_solution.png`
+- Top 10/localStorage planning: `copilot_top10_localstorage.png`; completed
+	leaderboard UI: `leaderboard_success.png`
+- 3x3 grid styling: `copilot_grid_styling.png`
+- Difficulty: `copilot_difficulty_plan5.png`
+- Locked cells and invalid feedback: `copilot_locked_cells.png` and
+	`invalid_move_feedback.png`
+- Check Solution: `copilot_check_solution.png`
+- Hint, timer, completion, dark mode, responsive/mobile, and final QA:
+	`hint_success.png`, `timer_running.png`,
+	`copilot_completion_implementation.png`, `grid_3x3_dark_mode.png`,
+	`responsive_mobile.png`, and `copilot_final_qa_plan5.png`
 
 ## Known Limitation
 
@@ -189,7 +199,7 @@ The Flask application's current puzzle, solution, and hint state is stored in pr
 
 ## GitHub Copilot Instructions
 
-`instruction.md` contains the project-level development instructions. `.github/copilot-instructions.md` contains repository-specific instructions for GitHub Copilot, including the project requirements, coding principles, Sudoku rules, Flask responsibilities, frontend expectations, testing guidance, and Git conventions.
+`instructions.md` contains the project-level development instructions. `.github/copilot-instructions.md` contains repository-specific instructions for GitHub Copilot, including the project requirements, coding principles, Sudoku rules, Flask responsibilities, frontend expectations, testing guidance, and Git conventions.
 
 ## License
 
