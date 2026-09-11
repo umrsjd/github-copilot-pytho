@@ -250,3 +250,165 @@ def test_validate_move_handles_non_json_request(client):
 
     assert response.status_code == 400
     assert response.get_json() == {'error': 'Request must be a JSON object'}
+
+
+def first_empty_cell():
+    return next(
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if app_module.CURRENT['puzzle'][row][col] == sudoku_logic.EMPTY
+    )
+
+
+def first_prefilled_cell():
+    return next(
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if app_module.CURRENT['puzzle'][row][col] != sudoku_logic.EMPTY
+    )
+
+
+def test_post_hint_returns_one_correct_value_and_increments_count(client):
+    client.get('/new')
+    row, col = first_empty_cell()
+
+    response = client.post('/hint', json={'row': row, 'col': col})
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        'row': row,
+        'col': col,
+        'value': app_module.CURRENT['solution'][row][col],
+        'hint_count': 1,
+    }
+    assert app_module.CURRENT['hint_count'] == 1
+    assert (row, col) in app_module.CURRENT['hinted_cells']
+    assert 'solution' not in response.get_json()
+
+
+def test_post_hint_increments_count_for_each_successful_hint(client):
+    client.get('/new')
+    first = first_empty_cell()
+    second = next(
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if app_module.CURRENT['puzzle'][row][col] == sudoku_logic.EMPTY
+        and (row, col) != first
+    )
+
+    first_response = client.post('/hint', json={'row': first[0], 'col': first[1]})
+    second_response = client.post('/hint', json={'row': second[0], 'col': second[1]})
+
+    assert first_response.get_json()['hint_count'] == 1
+    assert second_response.get_json()['hint_count'] == 2
+    assert app_module.CURRENT['hint_count'] == 2
+
+
+def test_post_hint_rejects_prefilled_cell(client):
+    client.get('/new')
+    row, col = first_prefilled_cell()
+
+    response = client.post('/hint', json={'row': row, 'col': col})
+
+    assert response.status_code == 400
+    assert response.get_json() == {'error': 'Prefilled cells cannot be changed'}
+    assert app_module.CURRENT['hint_count'] == 0
+
+
+def test_post_hint_rejects_already_hinted_cell(client):
+    client.get('/new')
+    row, col = first_empty_cell()
+    client.post('/hint', json={'row': row, 'col': col})
+
+    response = client.post('/hint', json={'row': row, 'col': col})
+
+    assert response.status_code == 400
+    assert response.get_json() == {'error': 'This cell already has a hint'}
+    assert app_module.CURRENT['hint_count'] == 1
+
+
+def test_post_hint_returns_no_available_cells_after_all_empty_cells_are_hinted(client):
+    client.get('/new')
+    empty_cells = [
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if app_module.CURRENT['puzzle'][row][col] == sudoku_logic.EMPTY
+    ]
+
+    for row, col in empty_cells:
+        response = client.post('/hint', json={'row': row, 'col': col})
+        assert response.status_code == 200
+
+    response = client.post('/hint', json={'row': empty_cells[0][0], 'col': empty_cells[0][1]})
+
+    assert response.status_code == 400
+    assert response.get_json() == {'error': 'No cells available for a hint'}
+    assert app_module.CURRENT['hint_count'] == len(empty_cells)
+
+
+def test_post_hint_before_new_game_returns_error(client):
+    response = client.post('/hint', json={'row': 0, 'col': 0})
+
+    assert response.status_code == 400
+    assert response.get_json() == {'error': 'No game in progress'}
+
+
+@pytest.mark.parametrize(
+    'payload',
+    [
+        {},
+        {'row': 0},
+        {'col': 0},
+        {'row': '0', 'col': 0},
+        {'row': 0, 'col': '0'},
+        {'row': True, 'col': 0},
+        {'row': 0, 'col': False},
+    ],
+)
+def test_post_hint_rejects_malformed_payload(client, payload):
+    client.get('/new')
+
+    response = client.post('/hint', json=payload)
+
+    assert response.status_code == 400
+    assert response.get_json() == {'error': 'row and col must be integers'}
+
+
+def test_post_hint_rejects_non_json_request(client):
+    client.get('/new')
+
+    response = client.post('/hint', data='not json')
+
+    assert response.status_code == 400
+    assert response.get_json() == {'error': 'Request must be a JSON object'}
+
+
+@pytest.mark.parametrize(
+    ('row', 'col'),
+    [(-1, 0), (0, -1), (9, 0), (0, 9)],
+)
+def test_post_hint_rejects_invalid_coordinates(client, row, col):
+    client.get('/new')
+
+    response = client.post('/hint', json={'row': row, 'col': col})
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        'error': 'row and col must be between 0 and 8'
+    }
+
+
+def test_new_game_resets_hint_state(client):
+    client.get('/new?difficulty=hard')
+    row, col = first_empty_cell()
+    client.post('/hint', json={'row': row, 'col': col})
+
+    response = client.get('/new?difficulty=easy')
+
+    assert response.status_code == 200
+    assert app_module.CURRENT['hint_count'] == 0
+    assert app_module.CURRENT['hinted_cells'] == set()

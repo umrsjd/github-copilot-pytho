@@ -15,6 +15,8 @@ import app as app_module
 def client():
     app_module.CURRENT['puzzle'] = None
     app_module.CURRENT['solution'] = None
+    app_module.CURRENT['hint_count'] = 0
+    app_module.CURRENT['hinted_cells'] = set()
     app_module.app.config.update(TESTING=True)
 
     with app_module.app.test_client() as test_client:
@@ -22,3 +24,5 @@ def client():
 
     app_module.CURRENT['puzzle'] = None
     app_module.CURRENT['solution'] = None
+    app_module.CURRENT['hint_count'] = 0
+    app_module.CURRENT['hinted_cells'] = set()

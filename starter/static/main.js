@@ -2,6 +2,8 @@
 const SIZE = 9;
 let puzzle = [];
 let validationVersions = [];
+let hintCount = 0;
+let hintedCells = new Set();
 
 function cellIndex(row, col) {
   return row * SIZE + col;
@@ -16,6 +18,11 @@ function setCellState(input, state) {
     input.classList.add('prefilled');
     input.disabled = true;
     input.setAttribute('aria-label', `Row ${Number(input.dataset.row) + 1}, column ${Number(input.dataset.col) + 1}, prefilled`);
+    input.removeAttribute('aria-describedby');
+  } else if (state === 'hint') {
+    input.classList.add('hint');
+    input.disabled = true;
+    input.setAttribute('aria-label', `Row ${Number(input.dataset.row) + 1}, column ${Number(input.dataset.col) + 1}, hint`);
     input.removeAttribute('aria-describedby');
   } else if (state === 'user-entered') {
     input.classList.add('user-entered');
@@ -38,6 +45,11 @@ function setMessage(text, isError = false) {
   const message = document.getElementById('message');
   message.innerText = text;
   message.style.color = isError ? '#d32f2f' : '';
+}
+
+function setHintCount(count) {
+  hintCount = count;
+  document.getElementById('hint-count').innerText = `Hints used: ${hintCount}`;
 }
 
 async function validateCell(input, value, version) {
@@ -114,6 +126,8 @@ function createBoardElement() {
 
 function renderPuzzle(puz) {
   puzzle = puz;
+  hintedCells = new Set();
+  setHintCount(0);
   createBoardElement();
   const boardDiv = document.getElementById('sudoku-board');
   const inputs = boardDiv.getElementsByTagName('input');
@@ -193,10 +207,57 @@ async function checkSolution() {
   }
 }
 
+function findHintTarget() {
+  const inputs = document.getElementById('sudoku-board').getElementsByTagName('input');
+  for (const input of inputs) {
+    if (!input.disabled && input.dataset.state === 'incorrect') {
+      return input;
+    }
+  }
+  for (const input of inputs) {
+    if (!input.disabled && !input.value) {
+      return input;
+    }
+  }
+  return null;
+}
+
+async function requestHint() {
+  const target = findHintTarget();
+  if (!target) {
+    setMessage('No cells are available for a hint.', true);
+    return;
+  }
+
+  const row = Number(target.dataset.row);
+  const col = Number(target.dataset.col);
+  const index = cellIndex(row, col);
+  validationVersions[index] += 1;
+
+  const response = await fetch('/hint', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({row, col})
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    setMessage(data.error || 'Unable to provide a hint.', true);
+    return;
+  }
+
+  const hintedInput = document.getElementById('sudoku-board').getElementsByTagName('input')[cellIndex(data.row, data.col)];
+  hintedInput.value = data.value;
+  hintedCells.add(cellIndex(data.row, data.col));
+  setCellState(hintedInput, 'hint');
+  setHintCount(data.hint_count);
+  setMessage('A correct value was filled in and locked as a hint.');
+}
+
 // Wire buttons
 window.addEventListener('load', () => {
   document.getElementById('new-game').addEventListener('click', newGame);
   document.getElementById('check-solution').addEventListener('click', checkSolution);
+  document.getElementById('hint').addEventListener('click', requestHint);
   // initialize
   newGame();
 });

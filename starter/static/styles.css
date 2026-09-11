@@ -44,6 +44,15 @@ h1 {
     color: #333;
 }
 
+.sudoku-cell.hint {
+    background: #fff3cd;
+    border-color: #9a6700;
+    font-weight: bold;
+    color: #6b4f00;
+    text-decoration: underline solid #9a6700;
+    text-decoration-thickness: 2px;
+}
+
 .sudoku-cell.user-entered {
     background: #fff;
 }
