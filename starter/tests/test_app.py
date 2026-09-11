@@ -1,5 +1,7 @@
 import copy
 
+import pytest
+
 import app as app_module
 import sudoku_logic
 
@@ -22,6 +24,35 @@ def test_get_new_returns_puzzle_and_stores_solution(client):
     assert all(len(row) == sudoku_logic.SIZE for row in puzzle)
     assert app_module.CURRENT['puzzle'] == puzzle
     assert app_module.CURRENT['solution'] is not None
+
+
+@pytest.mark.parametrize(
+    ('difficulty', 'expected_clues'),
+    [('easy', 45), ('medium', 35), ('hard', 30)],
+)
+def test_get_new_supports_difficulty_levels(client, difficulty, expected_clues):
+    response = client.get(f'/new?difficulty={difficulty}')
+
+    assert response.status_code == 200
+    puzzle = response.get_json()['puzzle']
+    assert sum(cell != sudoku_logic.EMPTY for row in puzzle for cell in row) == expected_clues
+
+
+def test_get_new_rejects_invalid_difficulty(client):
+    response = client.get('/new?difficulty=expert')
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        'error': 'difficulty must be easy, medium, or hard'
+    }
+
+
+def test_get_new_preserves_legacy_clues_parameter(client):
+    response = client.get('/new?clues=40')
+
+    assert response.status_code == 200
+    puzzle = response.get_json()['puzzle']
+    assert sum(cell != sudoku_logic.EMPTY for row in puzzle for cell in row) == 40
 
 
 def test_post_check_before_new_game_returns_error(client):

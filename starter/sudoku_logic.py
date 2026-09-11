@@ -3,6 +3,19 @@ import random
 
 SIZE = 9
 EMPTY = 0
+DIFFICULTY_CLUES = {
+    'easy': 45,
+    'medium': 35,
+    'hard': 30,
+}
+MAX_GENERATION_ATTEMPTS = 5
+
+
+def clues_for_difficulty(difficulty):
+    try:
+        return DIFFICULTY_CLUES[difficulty.lower()]
+    except (AttributeError, KeyError):
+        raise ValueError("difficulty must be easy, medium, or hard")
 
 def deep_copy(board):
     return copy.deepcopy(board)
@@ -130,9 +143,15 @@ def remove_cells(board, clues):
         raise ValueError("unable to generate a puzzle with the requested clues")
 
 def generate_puzzle(clues=35):
-    board = create_empty_board()
-    fill_board(board)
-    solution = deep_copy(board)
-    remove_cells(board, clues)
-    puzzle = deep_copy(board)
-    return puzzle, solution
+    for _ in range(MAX_GENERATION_ATTEMPTS):
+        board = create_empty_board()
+        fill_board(board)
+        solution = deep_copy(board)
+        try:
+            remove_cells(board, clues)
+        except ValueError:
+            continue
+        puzzle = deep_copy(board)
+        return puzzle, solution
+
+    raise ValueError("unable to generate a puzzle with the requested clues")

@@ -1,5 +1,7 @@
 import random
 
+import pytest
+
 import sudoku_logic
 
 
@@ -74,6 +76,34 @@ def test_generate_puzzle_has_requested_clue_count():
     puzzle, _ = sudoku_logic.generate_puzzle(clues=40)
 
     assert sum(cell != sudoku_logic.EMPTY for row in puzzle for cell in row) == 40
+
+
+@pytest.mark.parametrize(
+    ('difficulty', 'expected_clues'),
+    [('easy', 45), ('medium', 35), ('hard', 30)],
+)
+def test_difficulty_returns_configured_clue_count(difficulty, expected_clues):
+    assert sudoku_logic.clues_for_difficulty(difficulty) == expected_clues
+
+
+def test_difficulty_clue_counts_are_ordered():
+    assert sudoku_logic.clues_for_difficulty('easy') > sudoku_logic.clues_for_difficulty('medium')
+    assert sudoku_logic.clues_for_difficulty('medium') > sudoku_logic.clues_for_difficulty('hard')
+
+
+def test_invalid_difficulty_raises_value_error():
+    with pytest.raises(ValueError):
+        sudoku_logic.clues_for_difficulty('expert')
+
+
+@pytest.mark.parametrize('difficulty', ['easy', 'medium', 'hard'])
+def test_generated_difficulty_puzzle_has_exactly_one_solution(difficulty):
+    random.seed(difficulty)
+    clues = sudoku_logic.clues_for_difficulty(difficulty)
+    puzzle, _ = sudoku_logic.generate_puzzle(clues=clues)
+
+    assert sum(cell != sudoku_logic.EMPTY for row in puzzle for cell in row) == clues
+    assert sudoku_logic.count_solutions(puzzle) == 1
 
 
 def test_generate_puzzle_returns_matching_dimensions_and_valid_values():
