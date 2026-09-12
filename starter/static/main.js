@@ -249,7 +249,10 @@ function setCellState(input, state) {
     input.classList.add('region-alt');
   }
   input.dataset.state = state;
-  input.setAttribute('aria-invalid', state === 'incorrect' ? 'true' : 'false');
+  input.setAttribute(
+    'aria-invalid',
+    state === 'incorrect' || state === 'missing' ? 'true' : 'false'
+  );
 
   if (state === 'prefilled') {
     input.classList.add('prefilled');
@@ -266,6 +269,11 @@ function setCellState(input, state) {
     input.disabled = false;
     input.setAttribute('aria-label', `Row ${Number(input.dataset.row) + 1}, column ${Number(input.dataset.col) + 1}, user entered`);
     input.removeAttribute('aria-describedby');
+  } else if (state === 'missing') {
+    input.classList.add('user-entered', 'incorrect');
+    input.disabled = false;
+    input.setAttribute('aria-label', `Row ${Number(input.dataset.row) + 1}, column ${Number(input.dataset.col) + 1}, missing value`);
+    input.setAttribute('aria-describedby', 'message');
   } else if (state === 'incorrect') {
     input.classList.add('user-entered', 'incorrect');
     input.disabled = false;
@@ -458,7 +466,7 @@ async function checkSolution() {
     } else if (inp.value) {
       setCellState(inp, 'user-entered');
     } else {
-      setCellState(inp, 'empty');
+      setCellState(inp, 'missing');
     }
   }
   if (data.complete) {

@@ -94,6 +94,44 @@ def test_post_check_reports_incorrect_solution_cell(client):
     }
 
 
+def test_post_check_mixed_incomplete_board_reports_only_wrong_editable_cells(client):
+    client.get('/new')
+    puzzle = app_module.CURRENT['puzzle']
+    solution = app_module.CURRENT['solution']
+    editable_cells = [
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if puzzle[row][col] == sudoku_logic.EMPTY
+    ]
+    blank_cell, correct_cell, incorrect_cell = editable_cells[:3]
+    prefilled_cell = next(
+        (row, col)
+        for row in range(sudoku_logic.SIZE)
+        for col in range(sudoku_logic.SIZE)
+        if puzzle[row][col] != sudoku_logic.EMPTY
+    )
+    board = copy.deepcopy(puzzle)
+    board[correct_cell[0]][correct_cell[1]] = solution[correct_cell[0]][correct_cell[1]]
+    board[incorrect_cell[0]][incorrect_cell[1]] = (
+        solution[incorrect_cell[0]][incorrect_cell[1]] % sudoku_logic.SIZE + 1
+    )
+    board[prefilled_cell[0]][prefilled_cell[1]] = (
+        solution[prefilled_cell[0]][prefilled_cell[1]] % sudoku_logic.SIZE + 1
+    )
+
+    response = client.post('/check', json={'board': board})
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data == {
+        'incorrect': [[incorrect_cell[0], incorrect_cell[1]]],
+        'complete': False,
+    }
+    assert 'solution' not in data
+    assert board[blank_cell[0]][blank_cell[1]] == sudoku_logic.EMPTY
+
+
 def test_post_check_does_not_report_blank_cells_and_is_incomplete(client):
     client.get('/new')
 
